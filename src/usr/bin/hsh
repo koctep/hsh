@@ -1,5 +1,10 @@
 #!/bin/sh
 
-pdw=`pwd`
+if [ -n HSHROOT ] && [ -n HSHPACKETS ]; then
+  p=`pwd`
+  HSHPACKETS=`basename $p`
+  HSHROOT=..
+fi
 
-HSHSRC=$pwd make -f /usr/share/hsh/Makefile HSHLOCALCFG=/etc/hsh "$@"
+HSHTPL=/usr/share/hsh/tpl HSHROOT=$HSHROOT HSHPACKETS=$HSHPACKETS \
+  make -f /usr/share/hsh/Makefile HSHLOCALCFG=/etc/hsh "$@"
