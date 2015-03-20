@@ -97,7 +97,7 @@ $(HSHPOOLDIR):
 	for f in $$files; do \
 		if [ -e "$$f" ]; then \
 			if [ `dpkg -S $$f 2>/dev/null | egrep -v '^$*' -c` -gt 0 ]; then\
-				echo "$$f" >> $$df; \
+				echo "$$f" >> $$df.files; \
 			fi; \
 		fi; \
 	done; \
