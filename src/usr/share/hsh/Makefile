@@ -1,13 +1,27 @@
 HSHLOCALCFG ?= Makefile.config
-
 -include $(HSHLOCALCFG)
 
-HSHROOT ?= src
-HSHPOOLDIR ?= ""
+PWD := $(shell pwd)
+
+ifeq ($(hsh), packet)
+HSHROOT 		:= ..
+HSHPACKETS 	:= $(shell basename $(PWD))
+endif
+
+ifeq ($(hsh), dir)
+HSHROOT			:= .
+endif
+
 HSHTPLDIR ?= tpl
-HSHPACKETS ?= $(shell find $(HSHROOT) -maxdepth 1 -mindepth 1 -type d -exec basename '{}' \;)
+
 HSHMODIFIED ?= 0
+
 HSHCOLOR ?= 1
+
+HSHROOT ?= src
+HSHPACKETS ?= $(shell find $(HSHROOT) -maxdepth 1 -mindepth 1 -type d -exec basename '{}' \;)
+
+HSHPOOLDIR ?= ""
 
 ifeq ($(HSHPOOLDIR), "")
 HSHDEST ?= $(HSHROOT)
