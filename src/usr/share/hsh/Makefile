@@ -3,7 +3,7 @@ LOCALCFG ?= Makefile.config
 -include $(LOCALCFG)
 
 DIR ?= src
-POOLDIR ?= pool
+POOLDIR ?= ""
 TPLDIR ?= tpl
 DIRS ?= $(shell find $(DIR) -maxdepth 1 -mindepth 1 -type d -exec basename '{}' \;)
 
@@ -20,8 +20,10 @@ PWD := $(shell pwd)
 .PRECIOUS: $(POOLDIR) $(POOLDIR)/Packages $(POOLDIR)/Packages.bz2
 
 all: $(DIRS:%=%/discard)
-	dpkg-scanpackages $(POOLDIR) > $(POOLDIR)/Packages; \
-	bzip2 -kf $(POOLDIR)/Packages
+	if [ -n $(POOLDIR) ]; then \
+		dpkg-scanpackages $(POOLDIR) > $(POOLDIR)/Packages; \
+		bzip2 -kf $(POOLDIR)/Packages; \
+	fi
 
 status: $(DIRS:%=%/status)
 

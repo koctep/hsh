@@ -1,5 +1,4 @@
 DIR := ..
-POOLDIR := ..
 DIRS := hsh
 TPLDIR := src/usr/share/hsh/tpl
 
