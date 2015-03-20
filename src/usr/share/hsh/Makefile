@@ -60,8 +60,9 @@ opts:
 	[ -e $(HSHROOT)/$*/divert.files ] && rm $(HSHROOT)/$*/divert.files; \
 	true
 
-%/pack: %/set-version $(HSHPOOLDIR) $(HSHDEST)
+%/pack: %/set-version $(HSHPOOLDIR)
 	@echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)packing$(HSHCOLORRST)'; \
+	mkdir -p $(HSHDEST); \
 	rm -f $(HSHDEST)/$*_*.deb; \
 	fakeroot sh -c "chown -R root:root $(HSHROOT)/$*/src;dpkg-deb -b $(HSHROOT)/$*/src $(HSHDEST)";
 
