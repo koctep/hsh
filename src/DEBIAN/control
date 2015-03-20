@@ -2,6 +2,6 @@ Package: hsh
 Version: {{git}}
 Architecture: all
 Maintainer: Ilya Ashchepkov <koctep@gmail.com>
-Depends:
+Depends: make, dpkg, fakeroot, git, bzip2, dpkg-dev, coreutils, sed
 Priority: optional
 Description: hsh
