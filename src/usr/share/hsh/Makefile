@@ -37,7 +37,8 @@ diff: $(DIRS:%=%/diff)
 	dpkg-deb -b $(DIR)/$*/src $(POOLDIR);
 
 $(POOLDIR):
-	mkdir -p $(POOLDIR)
+	[ -n $(POOLDIR) ] && mkdir -p $(POOLDIR); \
+	true
 
 %/set-version: %/check-modified
 	sed -i "s/^Version: {{git}}$$/Version: `git --work-tree $(DIR)/$* --git-dir $(DIR)/$*/.git describe --tags \
