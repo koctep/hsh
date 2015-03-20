@@ -32,7 +32,7 @@ diff: $(HSHDIRS:%=%/diff)
 %/discard: %/pack
 	git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git checkout -- src/DEBIAN/control
 
-%/pack: %/set-version $(HSHPOOLDIR)
+%/pack: %/set-version $(HSHPOOLDIR) %/divert
 	if [ -n $(HSHPOOLDIR) ]; then \
 		rm -f $(HSHPOOLDIR)/$*_*.deb; \
 		fakeroot sh -c "chown -R root:root $(HSHDIR)/$*/src;dpkg-deb -b $(HSHDIR)/$*/src $(HSHPOOLDIR)"; \
@@ -48,31 +48,6 @@ $(HSHPOOLDIR):
 %/set-version: %/check-modified
 	sed -i "s/^Version: {{git}}$$/Version: `git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git describe --tags \
 	| sed 's/^[^0-9]*//'`/" $(HSHDIR)/$*/src/DEBIAN/control;
-
-%/check-modified: %/set-branch
-	if [ ! $$(git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git status --porcelain | wc -l) -eq 0 ]; then \
-		echo "$*: modified"; >&2 \
-		exit 2; \
-	fi
-
-%/set-branch: $(HSHDIR)/%/.git %/divert
-	if [ $$(git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git branch | wc -l) -eq 0 ]; then \
-		echo "$*: not initialized" >&2; \
-		exit 1; \
-	fi; \
-	git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git checkout debian 2>&1; \
-	[ $$? -eq 1 ] && git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git checkout -b debian 2>&1 && true; \
-	true
-
-$(HSHDIR)/%/.git: $(HSHDIR)/%/src/DEBIAN/control %/divert
-	if [ ! -d $@ ]; then \
-		cd $(HSHDIR)/$* \
-		&& git init \
-		&& git add * \
-		&& git ci -m 'initial commit' \
-		&& git tag 0.0.0 \
-		&& cd $(PWD); \
-	fi
 
 %/divert: %/divert-files
 	@git="git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git"; \
@@ -125,6 +100,31 @@ $(HSHDIR)/%/.git: $(HSHDIR)/%/src/DEBIAN/control %/divert
 			fi; \
 		fi; \
 	done; \
+
+%/check-modified: %/set-branch
+	if [ ! $$(git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git status --porcelain | wc -l) -eq 0 ]; then \
+		echo "$*: modified"; >&2 \
+		exit 2; \
+	fi
+
+%/set-branch: $(HSHDIR)/%/.git %/divert
+	if [ $$(git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git branch | wc -l) -eq 0 ]; then \
+		echo "$*: not initialized" >&2; \
+		exit 1; \
+	fi; \
+	git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git checkout debian 2>&1; \
+	[ $$? -eq 1 ] && git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git checkout -b debian 2>&1 && true; \
+	true
+
+$(HSHDIR)/%/.git: $(HSHDIR)/%/src/DEBIAN/control
+	if [ ! -d $@ ]; then \
+		cd $(HSHDIR)/$* \
+		&& git init \
+		&& git add * \
+		&& git ci -m 'initial commit' \
+		&& git tag 0.0.0 \
+		&& cd $(PWD); \
+	fi
 
 $(HSHDIR)/%/src/DEBIAN/control: $(HSHDIR)/%/src/DEBIAN
 	if [ ! -e $@ ]; then \
