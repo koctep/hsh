@@ -6,6 +6,7 @@ HSHDIR ?= src
 HSHPOOLDIR ?= ""
 HSHPTLDIR ?= tpl
 HSHDIRS ?= $(shell find $(HSHDIR) -maxdepth 1 -mindepth 1 -type d -exec basename '{}' \;)
+HSHMODIFIED ?= 0
 
 SRC := $(HSHDIRS:%=$(HSHDIR)/%)
 PWD := $(shell pwd)
@@ -30,9 +31,13 @@ status: $(HSHDIRS:%=%/status)
 diff: $(HSHDIRS:%=%/diff)
 
 %/discard: %/pack
-	git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git checkout -- src/DEBIAN/control
+	git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git checkout -- src/DEBIAN/control; \
+	dd=$(HSHDIR)/$*/src/DEBIAN; \
+	[ -e $$dd/preinst ] && rm $$dd/preinst; \
+	[ -e $$dd/postrm ] && rm $$dd/postrm; \
+	true
 
-%/pack: %/set-version $(HSHPOOLDIR) %/divert
+%/pack: %/set-version $(HSHPOOLDIR)
 	if [ -n $(HSHPOOLDIR) ]; then \
 		rm -f $(HSHPOOLDIR)/$*_*.deb; \
 		fakeroot sh -c "chown -R root:root $(HSHDIR)/$*/src;dpkg-deb -b $(HSHDIR)/$*/src $(HSHPOOLDIR)"; \
@@ -45,12 +50,12 @@ $(HSHPOOLDIR):
 	[ -n $(HSHPOOLDIR) ] && mkdir -p $(HSHPOOLDIR); \
 	true
 
-%/set-version: %/check-modified
+%/set-version: %/divert
 	sed -i "s/^Version: {{git}}$$/Version: `git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git describe --tags \
 	| sed 's/^[^0-9]*//'`/" $(HSHDIR)/$*/src/DEBIAN/control;
 
 %/divert: %/divert-files
-	@git="git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git"; \
+	git="git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git"; \
 	if [ -e "$(HSHDIR)/$*/divert.files" ]; then \
 		for df in preinst postrm; do \
 			of="$(HSHDIR)/$*/src/DEBIAN/$$df"; \
@@ -64,7 +69,7 @@ $(HSHPOOLDIR):
 					echo "fi" >> $$of; \
 				done; \
 			elif [ "$$df" = "postrm" ]; then \
-				for f in $$div; do \
+				for f in `cat $(HSHDIR)/$*/divert.files`; do \
 					echo "if [ remove = \"\$$1\"" \
 						" -o abort-install = \"\$$1\"" \
 						" -o disappear = \"\$$1\" ]; then" >> $$of; \
@@ -74,40 +79,38 @@ $(HSHPOOLDIR):
 			fi ;\
 			echo "\nexit 0" >> $$of; \
 			chmod a+x $$of; \
-			$$git add src/DEBIAN/$$df; \
 		done; \
-		$$git commit -m 'added preinst/postrm hooks'; \
 	else \
 		for df in preinst postrm; do \
 			of="src/DEBIAN/$$df"; \
-			[ -e $$of ] && $$git rm $$of; \
+			[ -e $$of ] && rm $(HSHDIR)/$*/$$of; \
 		done; \
-		$$git commit -m 'deleted preinst/postrm hooks'; \
 	fi; \
 	true
 
-%/divert-files:
-	@git="git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git"; \
+%/divert-files: %/check-modified
+	git="git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git"; \
 	df=$(HSHDIR)/$*/divert ;\
 	[ -e $$df.files ] && rm $$df.files;\
 	[ -e $$df ] && cat $$df > $$df.files ;\
 	files=`find $(HSHDIR)/$*/src -type f | grep -v DEBIAN | sed 's/$(HSHDIR)\/$*\/src//'`; \
 	for f in $$files; do \
 		if [ -e "$$f" ]; then \
-			dpkg -S "$$f" 2>/dev/null 1>/dev/null; \
-			if [ $$? -eq 0 ]; then\
+			if [ `dpkg -S $$f 2>/dev/null | egrep -v '^$*' -c` -gt 0 ]; then\
 				echo "$$f" >> $$df; \
 			fi; \
 		fi; \
 	done; \
 
 %/check-modified: %/set-branch
-	if [ ! $$(git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git status --porcelain | wc -l) -eq 0 ]; then \
-		echo "$*: modified"; >&2 \
-		exit 2; \
+	if [ $(HSHMODIFIED) -eq 0 ]; then \
+		if [ ! $$(git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git status --porcelain | wc -l) -eq 0 ]; then \
+			echo "$*: modified"; >&2 \
+			exit 2; \
+		fi; \
 	fi
 
-%/set-branch: $(HSHDIR)/%/.git %/divert
+%/set-branch: $(HSHDIR)/%/.git
 	if [ $$(git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git branch | wc -l) -eq 0 ]; then \
 		echo "$*: not initialized" >&2; \
 		exit 1; \
@@ -137,12 +140,12 @@ $(HSHDIR)/%/src/DEBIAN:
 	mkdir -p $@
 
 %/status:
-	@msg=`git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git status --porcelain`; \
+	msg=`git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git status --porcelain`; \
 	[ -n "$$msg" ] && printf "$*:\n$$msg\n"; \
 	true
 
 %/diff:
-	@files=`find $(HSHDIR)/$*/src -type f | grep -v DEBIAN | sed "s/$(HSHDIR)\/$*\/src//"`; \
+	files=`find $(HSHDIR)/$*/src -type f | grep -v DEBIAN | sed "s/$(HSHDIR)\/$*\/src//"`; \
 	diff=""; \
 	for of in $$files; do \
 		msg=""; \
