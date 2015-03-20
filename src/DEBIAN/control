@@ -1,0 +1,7 @@
+Package: hsh
+Version: {{git}}
+Architecture: all
+Maintainer: Ilya Ashchepkov <koctep@gmail.com>
+Depends:
+Priority: optional
+Description: hsh

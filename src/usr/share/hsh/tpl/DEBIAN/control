@@ -1,0 +1,7 @@
+Package: {{name}}
+Version: {{git}}
+Architecture: all
+Maintainer: {{maintainer}}
+Depends:
+Priority: optional
+Description: {{description}}
