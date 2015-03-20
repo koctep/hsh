@@ -7,6 +7,13 @@ HSHPOOLDIR ?= ""
 HSHPTLDIR ?= tpl
 HSHDIRS ?= $(shell find $(HSHDIR) -maxdepth 1 -mindepth 1 -type d -exec basename '{}' \;)
 HSHMODIFIED ?= 0
+HSHCOLOR ?= 1
+
+ifeq ($(HSHCOLOR), 1)
+HSHCOLORPKT ?= \033[0;32m
+HSHCOLORMSG ?= \033[0;33m
+HSHCOLORRST = \033[00m
+endif
 
 SRC := $(HSHDIRS:%=$(HSHDIR)/%)
 PWD := $(shell pwd)
@@ -21,7 +28,8 @@ PWD := $(shell pwd)
 .PRECIOUS: $(HSHPOOLDIR) $(HSHPOOLDIR)/Packages $(HSHPOOLDIR)/Packages.bz2
 
 all: $(HSHDIRS:%=%/discard)
-	if [ -n $(HSHPOOLDIR) ]; then \
+	@if [ -n $(HSHPOOLDIR) ]; then \
+		echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)updating packages file$(HSHCOLORRST)'; \
 		dpkg-scanpackages $(HSHPOOLDIR) > $(HSHPOOLDIR)/Packages; \
 		bzip2 -kf $(HSHPOOLDIR)/Packages; \
 	fi
@@ -31,6 +39,7 @@ status: $(HSHDIRS:%=%/status)
 diff: $(HSHDIRS:%=%/diff)
 
 %/discard: %/pack
+	@echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)discarding changes$(HSHCOLORRST)'; \
 	git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git checkout -- src/DEBIAN/control; \
 	dd=$(HSHDIR)/$*/src/DEBIAN; \
 	[ -e $$dd/preinst ] && rm $$dd/preinst; \
@@ -39,6 +48,7 @@ diff: $(HSHDIRS:%=%/diff)
 	true
 
 %/pack: %/set-version $(HSHPOOLDIR)
+	@echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)packing$(HSHCOLORRST)'; \
 	if [ -n $(HSHPOOLDIR) ]; then \
 		rm -f $(HSHPOOLDIR)/$*_*.deb; \
 		fakeroot sh -c "chown -R root:root $(HSHDIR)/$*/src;dpkg-deb -b $(HSHDIR)/$*/src $(HSHPOOLDIR)"; \
@@ -48,16 +58,20 @@ diff: $(HSHDIRS:%=%/diff)
 	fi
 
 $(HSHPOOLDIR):
-	[ -n $(HSHPOOLDIR) ] && mkdir -p $(HSHPOOLDIR); \
+	@[ -n $(HSHPOOLDIR) ] \
+	&& echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)creating pooldir $(HSHPOOLDIR)$(HSHCOLORRST)' \
+	&& mkdir -p $(HSHPOOLDIR); \
 	true
 
 %/set-version: %/divert
+	@echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)setting version$(HSHCOLORRST)'; \
 	sed -i "s/^Version: {{git}}$$/Version: `git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git describe --tags \
 	| sed 's/^[^0-9]*//'`/" $(HSHDIR)/$*/src/DEBIAN/control;
 
 %/divert: %/divert-files
-	git="git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git"; \
+	@git="git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git"; \
 	if [ -e "$(HSHDIR)/$*/divert.files" ]; then \
+		echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)creating DEBIAN/preinst|postrm$(HSHCOLORRST)'; \
 		for df in preinst postrm; do \
 			of="$(HSHDIR)/$*/src/DEBIAN/$$df"; \
 			echo "#!/bin/sh\nset -e\n" > $$of; \
@@ -82,6 +96,7 @@ $(HSHPOOLDIR):
 			chmod a+x $$of; \
 		done; \
 	else \
+		echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)removing DEBIAN/preinst|postrm$(HSHCOLORRST)'; \
 		for df in preinst postrm; do \
 			of="src/DEBIAN/$$df"; \
 			[ -e $$of ] && rm $(HSHDIR)/$*/$$of; \
@@ -90,6 +105,7 @@ $(HSHPOOLDIR):
 	true
 
 %/divert-files: %/check-modified
+	@echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)diverting files$(HSHCOLORRST)'; \
 	git="git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git"; \
 	df=$(HSHDIR)/$*/divert ;\
 	[ -e $$df.files ] && rm $$df.files;\
@@ -104,7 +120,8 @@ $(HSHPOOLDIR):
 	done; \
 
 %/check-modified: %/set-branch
-	if [ $(HSHMODIFIED) -eq 0 ]; then \
+	@if [ $(HSHMODIFIED) -eq 0 ]; then \
+		echo '$(HSHCOLORPKT)$*: $(HSHCOLORMSG)cheking repository modification$(HSHCOLORRST)'; \
 		if [ ! $$(git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git status --porcelain | wc -l) -eq 0 ]; then \
 			echo "$*: modified"; >&2 \
 			exit 2; \
@@ -112,6 +129,7 @@ $(HSHPOOLDIR):
 	fi
 
 %/set-branch: $(HSHDIR)/%/.git
+	@echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)setting branch to "debian"$(HSHCOLORRST)'; \
 	if [ $$(git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git branch | wc -l) -eq 0 ]; then \
 		echo "$*: not initialized" >&2; \
 		exit 1; \
@@ -121,7 +139,8 @@ $(HSHPOOLDIR):
 	true
 
 $(HSHDIR)/%/.git: $(HSHDIR)/%/src/DEBIAN/control
-	if [ ! -d $@ ]; then \
+	@if [ ! -d $@ ]; then \
+		echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)git init && first commit$(HSHCOLORRST)'; \
 		cd $(HSHDIR)/$* \
 		&& git init \
 		&& git add * \
@@ -131,21 +150,25 @@ $(HSHDIR)/%/.git: $(HSHDIR)/%/src/DEBIAN/control
 	fi
 
 $(HSHDIR)/%/src/DEBIAN/control: $(HSHDIR)/%/src/DEBIAN
-	if [ ! -e $@ ]; then \
+	@if [ ! -e $@ ]; then \
+		echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)setting DEBIAN/control$(HSHCOLORRST)'; \
 		sed "s/Package: {{name}}/Package: $*/" $(HSHPTLDIR)/DEBIAN/control \
 		| sed "s/Description: {{description}}/Description: $*/" \
 		| sed "s/Maintainer: {{maintainer}}/Maintainer: `git config --get user.name` <`git config --get user.email`>/" > $@; \
 	fi
 
 $(HSHDIR)/%/src/DEBIAN:
+	@echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)creating DEBIAN directory$(HSHCOLORRST)'; \
 	mkdir -p $@
 
 %/status:
+	@echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)status$(HSHCOLORRST)'; \
 	msg=`git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git status --porcelain`; \
 	[ -n "$$msg" ] && printf "$*:\n$$msg\n"; \
 	true
 
 %/diff:
+	@echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)diff$(HSHCOLORRST)'; \
 	files=`find $(HSHDIR)/$*/src -type f | grep -v DEBIAN | sed "s/$(HSHDIR)\/$*\/src//"`; \
 	diff=""; \
 	for of in $$files; do \
