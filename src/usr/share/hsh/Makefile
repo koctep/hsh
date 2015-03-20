@@ -1,13 +1,13 @@
-LOCALCFG ?= Makefile.config
+HSHLOCALCFG ?= Makefile.config
 
--include $(LOCALCFG)
+-include $(HSHLOCALCFG)
 
-DIR ?= src
-POOLDIR ?= ""
-TPLDIR ?= tpl
-DIRS ?= $(shell find $(DIR) -maxdepth 1 -mindepth 1 -type d -exec basename '{}' \;)
+HSHDIR ?= src
+HSHPOOLDIR ?= ""
+HSHPTLDIR ?= tpl
+HSHDIRS ?= $(shell find $(HSHDIR) -maxdepth 1 -mindepth 1 -type d -exec basename '{}' \;)
 
-SRC := $(DIRS:%=$(DIR)/%)
+SRC := $(HSHDIRS:%=$(HSHDIR)/%)
 PWD := $(shell pwd)
 
 .PHONY: all %/discard %/pack %/set-version %/set-branch %/check-modified %/divert
@@ -17,55 +17,55 @@ PWD := $(shell pwd)
 .PRECIOUS: $(SRC) $(SRC:%=%/.git)
 .PRECIOUS: $(SRC:%=%/src/DEBIAN) $(SRC:%=%/src/DEBIAN/control)
 .PRECIOUS: $(SRC:%=%/src/DEBIAN/postrm) $(SRC:%=%/src/DEBIAN/preinst)
-.PRECIOUS: $(POOLDIR) $(POOLDIR)/Packages $(POOLDIR)/Packages.bz2
+.PRECIOUS: $(HSHPOOLDIR) $(HSHPOOLDIR)/Packages $(HSHPOOLDIR)/Packages.bz2
 
-all: $(DIRS:%=%/discard)
-	if [ -n $(POOLDIR) ]; then \
-		dpkg-scanpackages $(POOLDIR) > $(POOLDIR)/Packages; \
-		bzip2 -kf $(POOLDIR)/Packages; \
+all: $(HSHDIRS:%=%/discard)
+	if [ -n $(HSHPOOLDIR) ]; then \
+		dpkg-scanpackages $(HSHPOOLDIR) > $(HSHPOOLDIR)/Packages; \
+		bzip2 -kf $(HSHPOOLDIR)/Packages; \
 	fi
 
-status: $(DIRS:%=%/status)
+status: $(HSHDIRS:%=%/status)
 
-diff: $(DIRS:%=%/diff)
+diff: $(HSHDIRS:%=%/diff)
 
 %/discard: %/pack
-	git --work-tree $(DIR)/$* --git-dir $(DIR)/$*/.git checkout -- src/DEBIAN/control
+	git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git checkout -- src/DEBIAN/control
 
-%/pack: %/set-version $(POOLDIR)
-	rm -f $(POOLDIR)/$*_*.deb; \
-	if [ -n $(POOLDIR) ]; then \
-		dpkg-deb -b $(DIR)/$*/src $(POOLDIR); \
+%/pack: %/set-version $(HSHPOOLDIR)
+	rm -f $(HSHPOOLDIR)/$*_*.deb; \
+	if [ -n $(HSHPOOLDIR) ]; then \
+		dpkg-deb -b $(HSHDIR)/$*/src $(HSHPOOLDIR); \
 	else \
-		dpkg-deb -b $(DIR)/$*/src .; \
+		dpkg-deb -b $(HSHDIR)/$*/src .; \
 	fi
 
-$(POOLDIR):
-	[ -n $(POOLDIR) ] && mkdir -p $(POOLDIR); \
+$(HSHPOOLDIR):
+	[ -n $(HSHPOOLDIR) ] && mkdir -p $(HSHPOOLDIR); \
 	true
 
 %/set-version: %/check-modified
-	sed -i "s/^Version: {{git}}$$/Version: `git --work-tree $(DIR)/$* --git-dir $(DIR)/$*/.git describe --tags \
-	| sed 's/^[^0-9]*//'`/" $(DIR)/$*/src/DEBIAN/control;
+	sed -i "s/^Version: {{git}}$$/Version: `git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git describe --tags \
+	| sed 's/^[^0-9]*//'`/" $(HSHDIR)/$*/src/DEBIAN/control;
 
 %/check-modified: %/set-branch
-	if [ ! $$(git --work-tree $(DIR)/$* --git-dir $(DIR)/$*/.git status --porcelain | wc -l) -eq 0 ]; then \
+	if [ ! $$(git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git status --porcelain | wc -l) -eq 0 ]; then \
 		echo "$*: modified"; >&2 \
 		exit 2; \
 	fi
 
-%/set-branch: $(DIR)/%/.git %/divert
-	if [ $$(git --work-tree $(DIR)/$* --git-dir $(DIR)/$*/.git branch | wc -l) -eq 0 ]; then \
+%/set-branch: $(HSHDIR)/%/.git %/divert
+	if [ $$(git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git branch | wc -l) -eq 0 ]; then \
 		echo "$*: not initialized" >&2; \
 		exit 1; \
 	fi; \
-	git --work-tree $(DIR)/$* --git-dir $(DIR)/$*/.git checkout debian 2>&1; \
-	[ $$? -eq 1 ] && git --work-tree $(DIR)/$* --git-dir $(DIR)/$*/.git checkout -b debian 2>&1 && true; \
+	git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git checkout debian 2>&1; \
+	[ $$? -eq 1 ] && git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git checkout -b debian 2>&1 && true; \
 	true
 
-$(DIR)/%/.git: $(DIR)/%/src/DEBIAN/control %/divert
+$(HSHDIR)/%/.git: $(HSHDIR)/%/src/DEBIAN/control %/divert
 	if [ ! -d $@ ]; then \
-		cd $(DIR)/$* \
+		cd $(HSHDIR)/$* \
 		&& git init \
 		&& git add * \
 		&& git ci -m 'initial commit' \
@@ -74,8 +74,8 @@ $(DIR)/%/.git: $(DIR)/%/src/DEBIAN/control %/divert
 	fi
 
 %/divert:
-	@git="git --work-tree $(DIR)/$* --git-dir $(DIR)/$*/.git"; \
-	files=`find $(DIR)/$*/src -type f | grep -v DEBIAN | sed 's/$(DIR)\/$*\/src//'`; \
+	@git="git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git"; \
+	files=`find $(HSHDIR)/$*/src -type f | grep -v DEBIAN | sed 's/$(HSHDIR)\/$*\/src//'`; \
 	div=""; \
 	for f in $$files; do \
 		if [ -e "$$f" ]; then \
@@ -87,7 +87,7 @@ $(DIR)/%/.git: $(DIR)/%/src/DEBIAN/control %/divert
 	done; \
 	if [ -n "$$div" ]; then \
 		for df in preinst postrm; do \
-			of="$(DIR)/$*/src/DEBIAN/$$df"; \
+			of="$(HSHDIR)/$*/src/DEBIAN/$$df"; \
 			echo "#!/bin/sh\nset -e\n" > $$of; \
 			if [ "$$df" = "preinst" ]; then \
 				for f in $$div; do \
@@ -120,30 +120,30 @@ $(DIR)/%/.git: $(DIR)/%/src/DEBIAN/control %/divert
 	fi; \
 	true
 
-$(DIR)/%/src/DEBIAN/control: $(DIR)/%/src/DEBIAN
+$(HSHDIR)/%/src/DEBIAN/control: $(HSHDIR)/%/src/DEBIAN
 	if [ ! -e $@ ]; then \
-		sed "s/Package: {{name}}/Package: $*/" $(TPLDIR)/DEBIAN/control \
+		sed "s/Package: {{name}}/Package: $*/" $(HSHPTLDIR)/DEBIAN/control \
 		| sed "s/Description: {{description}}/Description: $*/" \
 		| sed "s/Maintainer: {{maintainer}}/Maintainer: `git config --get user.name` <`git config --get user.email`>/" > $@; \
 	fi
 
-$(DIR)/%/src/DEBIAN:
+$(HSHDIR)/%/src/DEBIAN:
 	mkdir -p $@
 
 %/status:
-	@msg=`git --work-tree $(DIR)/$* --git-dir $(DIR)/$*/.git status --porcelain`; \
+	@msg=`git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git status --porcelain`; \
 	[ -n "$$msg" ] && printf "$*:\n$$msg\n"; \
 	true
 
 %/diff:
-	@files=`find $(DIR)/$*/src -type f | grep -v DEBIAN | sed "s/$(DIR)\/$*\/src//"`; \
+	@files=`find $(HSHDIR)/$*/src -type f | grep -v DEBIAN | sed "s/$(HSHDIR)\/$*\/src//"`; \
 	diff=""; \
 	for of in $$files; do \
 		msg=""; \
 		if [ -e "$$of" ]; then \
-			diff $$of $(DIR)/$*/src/$$of > /dev/null; \
+			diff $$of $(HSHDIR)/$*/src/$$of > /dev/null; \
 			if [ $$? -eq 0 ]; then \
-			[ `git --work-tree $(DIR)/$* --git-dir $(DIR)/$*/.git status --porcelain -- src/$$of | wc -l` \
+			[ `git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git status --porcelain -- src/$$of | wc -l` \
 					-eq 0 ] || msg="not commited"; \
 			else \
 				msg="changed"; \

@@ -2,4 +2,4 @@
 
 pdw=`pwd`
 
-SRC=$pwd make -f /usr/share/hsh/Makefile LOCALCFG=/etc/hsh "$@"
+HSHSRC=$pwd make -f /usr/share/hsh/Makefile HSHLOCALCFG=/etc/hsh "$@"
