@@ -33,10 +33,11 @@ diff: $(HSHDIRS:%=%/diff)
 	git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git checkout -- src/DEBIAN/control
 
 %/pack: %/set-version $(HSHPOOLDIR)
-	rm -f $(HSHPOOLDIR)/$*_*.deb; \
 	if [ -n $(HSHPOOLDIR) ]; then \
+		rm -f $(HSHPOOLDIR)/$*_*.deb; \
 		dpkg-deb -b $(HSHDIR)/$*/src $(HSHPOOLDIR); \
 	else \
+		rm -f $*_*.deb; \
 		dpkg-deb -b $(HSHDIR)/$*/src .; \
 	fi
 
