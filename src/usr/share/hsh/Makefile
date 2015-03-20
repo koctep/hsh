@@ -33,7 +33,7 @@ diff: $(DIRS:%=%/diff)
 	git --work-tree $(DIR)/$* --git-dir $(DIR)/$*/.git checkout -- src/DEBIAN/control
 
 %/pack: %/set-version $(POOLDIR)
-	rm pool/$*_*.deb; \
+	rm -f $(POOLDIR)/$*_*.deb; \
 	dpkg-deb -b $(DIR)/$*/src $(POOLDIR);
 
 $(POOLDIR):
