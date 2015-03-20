@@ -35,6 +35,7 @@ diff: $(HSHDIRS:%=%/diff)
 	dd=$(HSHDIR)/$*/src/DEBIAN; \
 	[ -e $$dd/preinst ] && rm $$dd/preinst; \
 	[ -e $$dd/postrm ] && rm $$dd/postrm; \
+	[ -e $(HSHDIR)/$*/divert.files ] && rm $(HSHDIR)/$*/divert.files; \
 	true
 
 %/pack: %/set-version $(HSHPOOLDIR)
