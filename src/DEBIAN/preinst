@@ -1,0 +1,35 @@
+#!/bin/sh
+set -e
+
+mkdir -p /var/backups/usr/bin
+
+if [ "$1" = "install" ]; then
+	dpkg-divert --package hsh --rename \
+		--divert /var/backups/usr/bin/hsh /usr/bin/hsh
+fi
+mkdir -p /var/backups/usr/bin
+
+if [ "$1" = "install" ]; then
+	dpkg-divert --package hsh --rename \
+		--divert /var/backups/usr/bin/.hsh.swp /usr/bin/.hsh.swp
+fi
+mkdir -p /var/backups/usr/share/hsh
+
+if [ "$1" = "install" ]; then
+	dpkg-divert --package hsh --rename \
+		--divert /var/backups/usr/share/hsh/.Makefile.swp /usr/share/hsh/.Makefile.swp
+fi
+mkdir -p /var/backups/usr/share/hsh
+
+if [ "$1" = "install" ]; then
+	dpkg-divert --package hsh --rename \
+		--divert /var/backups/usr/share/hsh/Makefile /usr/share/hsh/Makefile
+fi
+mkdir -p /var/backups/usr/share/hsh/tpl
+
+if [ "$1" = "install" ]; then
+	dpkg-divert --package hsh --rename \
+		--divert /var/backups/usr/share/hsh/tpl/.gitignore /usr/share/hsh/tpl/.gitignore
+fi
+
+exit 0
