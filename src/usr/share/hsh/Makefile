@@ -10,7 +10,7 @@ HSHDIRS ?= $(shell find $(HSHDIR) -maxdepth 1 -mindepth 1 -type d -exec basename
 SRC := $(HSHDIRS:%=$(HSHDIR)/%)
 PWD := $(shell pwd)
 
-.PHONY: all %/discard %/pack %/set-version %/set-branch %/check-modified %/divert
+.PHONY: all %/discard %/pack %/set-version %/set-branch %/check-modified %/divert %/divert-files
 .PHONY: status %/status
 .PHONY: diff %/diff
 
@@ -74,24 +74,14 @@ $(HSHDIR)/%/.git: $(HSHDIR)/%/src/DEBIAN/control %/divert
 		&& cd $(PWD); \
 	fi
 
-%/divert:
+%/divert: %/divert-files
 	@git="git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git"; \
-	files=`find $(HSHDIR)/$*/src -type f | grep -v DEBIAN | sed 's/$(HSHDIR)\/$*\/src//'`; \
-	div=""; \
-	for f in $$files; do \
-		if [ -e "$$f" ]; then \
-			dpkg -S "$$f" 2>/dev/null 1>/dev/null; \
-			if [ $$? -eq 0 ]; then\
-				div="$$div $$f"; \
-			fi; \
-		fi; \
-	done; \
-	if [ -n "$$div" ]; then \
+	if [ -e "$(HSHDIR)/$*/divert.files" ]; then \
 		for df in preinst postrm; do \
 			of="$(HSHDIR)/$*/src/DEBIAN/$$df"; \
 			echo "#!/bin/sh\nset -e\n" > $$of; \
 			if [ "$$df" = "preinst" ]; then \
-				for f in $$div; do \
+				for f in `cat $(HSHDIR)/$*/divert.files`; do \
 					echo "mkdir -p /var/backups`dirname $$f`\n" >> $$of; \
 					echo "if [ \"\$$1\" = \"install\" ]; then" >> $$of;  \
 					echo "\tdpkg-divert --package $* --rename \\" >> $$of; \
@@ -120,6 +110,21 @@ $(HSHDIR)/%/.git: $(HSHDIR)/%/src/DEBIAN/control %/divert
 		$$git commit -m 'deleted preinst/postrm hooks'; \
 	fi; \
 	true
+
+%/divert-files:
+	@git="git --work-tree $(HSHDIR)/$* --git-dir $(HSHDIR)/$*/.git"; \
+	df=$(HSHDIR)/$*/divert ;\
+	[ -e $$df.files ] && rm $$df.files;\
+	[ -e $$df ] && cat $$df > $$df.files ;\
+	files=`find $(HSHDIR)/$*/src -type f | grep -v DEBIAN | sed 's/$(HSHDIR)\/$*\/src//'`; \
+	for f in $$files; do \
+		if [ -e "$$f" ]; then \
+			dpkg -S "$$f" 2>/dev/null 1>/dev/null; \
+			if [ $$? -eq 0 ]; then\
+				echo "$$f" >> $$df; \
+			fi; \
+		fi; \
+	done; \
 
 $(HSHDIR)/%/src/DEBIAN/control: $(HSHDIR)/%/src/DEBIAN
 	if [ ! -e $@ ]; then \
