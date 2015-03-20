@@ -2,6 +2,6 @@ Package: {{name}}
 Version: {{git}}
 Architecture: all
 Maintainer: {{maintainer}}
-Depends:
+Depends: {{depends}}
 Priority: optional
 Description: {{description}}

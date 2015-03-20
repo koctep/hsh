@@ -23,10 +23,10 @@ HSHCOLORRST = \033[00m
 endif
 
 SRC := $(HSHPACKETS:%=$(HSHROOT)/%)
-PWD := $(shell pwd)
 
 .PHONY: all opts
-.PHONY: all %/discard %/pack %/set-version %/set-branch %/check-modified %/divert %/divert-files
+.PHONY: all %/discard %/pack
+.PHONY: %/set-version %/set-depends %/set-branch %/divert %/divert-files %/check-modified
 .PHONY: status %/status
 .PHONY: diff %/diff
 
@@ -72,10 +72,22 @@ $(HSHPOOLDIR):
 	&& mkdir -p $(HSHPOOLDIR); \
 	true
 
-%/set-version: %/divert
+%/set-version: %/divert %/set-depends
 	@echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)setting version$(HSHCOLORRST)'; \
 	sed -i "s/^Version: {{git}}$$/Version: `git --work-tree $(HSHROOT)/$* --git-dir $(HSHROOT)/$*/.git describe --tags \
 	| sed 's/^[^0-9]*//'`/" $(HSHROOT)/$*/src/DEBIAN/control;
+
+%/set-depends:
+	@echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)setting dependencies$(HSHCOLORRST)'; \
+	deps=""; \
+	if [ -e $(HSHROOT)/$*/depends ]; then \
+		p=""; \
+		for d in `cat $(HSHROOT)/$*/depends`; do \
+			deps="$$deps$$p$$d"; \
+			p=" ,"; \
+		done; \
+	fi; \
+	sed -i "s/Depends: {{depends}}/Depends: $$deps/" $(HSHROOT)/$*/src/DEBIAN/control
 
 %/divert: %/divert-files
 	@git="git --work-tree $(HSHROOT)/$* --git-dir $(HSHROOT)/$*/.git"; \

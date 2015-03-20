@@ -1,0 +1,8 @@
+make
+dpkg
+fakeroot
+git
+bzip2
+dpkg-dev
+coreutils
+sed
