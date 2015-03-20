@@ -35,10 +35,10 @@ diff: $(HSHDIRS:%=%/diff)
 %/pack: %/set-version $(HSHPOOLDIR)
 	if [ -n $(HSHPOOLDIR) ]; then \
 		rm -f $(HSHPOOLDIR)/$*_*.deb; \
-		dpkg-deb -b $(HSHDIR)/$*/src $(HSHPOOLDIR); \
+		fakeroot sh -c "chown -r root:root $(HSHDIR)/$*/src;dpkg-deb -b $(HSHDIR)/$*/src $(HSHPOOLDIR)"; \
 	else \
 		rm -f $*_*.deb; \
-		dpkg-deb -b $(HSHDIR)/$*/src .; \
+		fakeroot sh -c "chown -r root:root $(HSHDIR)/$*/src;dpkg-deb -b $(HSHDIR)/$*/src ."; \
 	fi
 
 $(HSHPOOLDIR):
