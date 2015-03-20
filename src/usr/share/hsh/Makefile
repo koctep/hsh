@@ -34,7 +34,11 @@ diff: $(DIRS:%=%/diff)
 
 %/pack: %/set-version $(POOLDIR)
 	rm -f $(POOLDIR)/$*_*.deb; \
-	dpkg-deb -b $(DIR)/$*/src $(POOLDIR);
+	if [ -n $(POOLDIR) ]; then \
+		dpkg-deb -b $(DIR)/$*/src $(POOLDIR); \
+	else \
+		dpkg-deb -b $(DIR)/$*/src .; \
+	fi
 
 $(POOLDIR):
 	[ -n $(POOLDIR) ] && mkdir -p $(POOLDIR); \
