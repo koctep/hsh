@@ -4,7 +4,7 @@ HSHLOCALCFG ?= Makefile.config
 
 HSHROOT ?= src
 HSHPOOLDIR ?= ""
-HSHPTLDIR ?= tpl
+HSHTPLDIR ?= tpl
 HSHPACKETS ?= $(shell find $(HSHROOT) -maxdepth 1 -mindepth 1 -type d -exec basename '{}' \;)
 HSHMODIFIED ?= 0
 HSHCOLOR ?= 1
@@ -62,13 +62,8 @@ opts:
 
 %/pack: %/set-version $(HSHPOOLDIR) $(HSHDEST)
 	@echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)packing$(HSHCOLORRST)'; \
-	if [ -n $(HSHPOOLDIR) ]; then \
-		rm -f $(HSHPOOLDIR)/$*_*.deb; \
-		fakeroot sh -c "chown -R root:root $(HSHROOT)/$*/src;dpkg-deb -b $(HSHROOT)/$*/src $(HSHPOOLDIR)"; \
-	else \
-		rm -f $*_*.deb; \
-		fakeroot sh -c "chown -R root:root $(HSHROOT)/$*/src;dpkg-deb -b $(HSHROOT)/$*/src $(HSHDEST)"; \
-	fi
+	rm -f $(HSHDEST)/$*_*.deb; \
+	fakeroot sh -c "chown -R root:root $(HSHROOT)/$*/src;dpkg-deb -b $(HSHROOT)/$*/src $(HSHDEST)";
 
 $(HSHPOOLDIR):
 	@[ -n $(HSHPOOLDIR) ] \
@@ -130,11 +125,11 @@ $(HSHPOOLDIR):
 				echo "$$f" >> $$df.files; \
 			fi; \
 		fi; \
-	done; \
+	done;
 
 %/check-modified: %/set-branch
 	@if [ $(HSHMODIFIED) -eq 0 ]; then \
-		echo '$(HSHCOLORPKT)$*: $(HSHCOLORMSG)cheking repository modification$(HSHCOLORRST)'; \
+		echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)cheking repository modification$(HSHCOLORRST)'; \
 		if [ ! $$(git --work-tree $(HSHROOT)/$* --git-dir $(HSHROOT)/$*/.git status --porcelain | wc -l) -eq 0 ]; then \
 			echo "$*: modified"; >&2 \
 			exit 2; \
@@ -165,7 +160,7 @@ $(HSHROOT)/%/.git: $(HSHROOT)/%/src/DEBIAN/control
 $(HSHROOT)/%/src/DEBIAN/control: $(HSHROOT)/%/src/DEBIAN
 	@if [ ! -e $@ ]; then \
 		echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)setting DEBIAN/control$(HSHCOLORRST)'; \
-		sed "s/Package: {{name}}/Package: $*/" $(HSHPTLDIR)/DEBIAN/control \
+		sed "s/Package: {{name}}/Package: $*/" $(HSHTPLDIR)/DEBIAN/control \
 		| sed "s/Description: {{description}}/Description: $*/" \
 		| sed "s/Maintainer: {{maintainer}}/Maintainer: `git config --get user.name` <`git config --get user.email`>/" > $@; \
 	fi

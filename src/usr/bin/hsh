@@ -1,10 +1,9 @@
 #!/bin/sh
 
-if [ -n HSHROOT ] && [ -n HSHPACKETS ]; then
+if [ -n "$HSHROOT" ] && [ -n "$HSHPACKETS" ]; then
   p=`pwd`
-  HSHPACKETS=`basename $p`
-  HSHROOT=..
+  export HSHPACKETS=`basename $p`
+  export HSHROOT=..
 fi
 
-HSHTPL=/usr/share/hsh/tpl HSHROOT=$HSHROOT HSHPACKETS=$HSHPACKETS \
-  make -f /usr/share/hsh/Makefile HSHLOCALCFG=/etc/hsh "$@"
+HSHTPLDIR=/usr/share/hsh/tpl make -f /usr/share/hsh/Makefile HSHLOCALCFG=/etc/hsh "$@"
