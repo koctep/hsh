@@ -86,10 +86,11 @@ $(HSHPOOLDIR):
 	&& mkdir -p $(HSHPOOLDIR); \
 	true
 
-%/set-version: %/divert %/set-depends
+%/set-version: %/divert %/set-depends %/set-maintainer
 	@echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)setting version$(HSHCOLORRST)'; \
-	sed -i "s/^Version: {{git}}$$/Version: `git --work-tree $(HSHROOT)/$* --git-dir $(HSHROOT)/$*/.git describe --tags \
-	| sed 's/^[^0-9]*//'`/" $(HSHROOT)/$*/src/DEBIAN/control;
+	git="git --work-tree $(HSHROOT)/$* --git-dir $(HSHROOT)/$*/.git"; \
+	ver=`$$git describe --tags | sed 's/^[^0-9]*//'`; \
+	sed -i "s/^Version: {{git}}$$/Version: $$ver/" $(HSHROOT)/$*/src/DEBIAN/control;
 
 %/set-depends:
 	@echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)setting dependencies$(HSHCOLORRST)'; \
@@ -98,10 +99,14 @@ $(HSHPOOLDIR):
 		p=""; \
 		for d in `cat $(HSHROOT)/$*/depends`; do \
 			deps="$$deps$$p$$d"; \
-			p=" ,"; \
+			p=", "; \
 		done; \
 	fi; \
 	sed -i "s/Depends: {{depends}}/Depends: $$deps/" $(HSHROOT)/$*/src/DEBIAN/control
+
+%/set-maintainer:
+	@echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)setting maintainer$(HSHCOLORRST)'; \
+	sed -i "s/Maintainer: {{maintainer}}/Maintainer: `git config --get user.name` <`git config --get user.email`>/" $(HSHROOT)/$*/src/DEBIAN/control
 
 %/divert: %/divert-files
 	@git="git --work-tree $(HSHROOT)/$* --git-dir $(HSHROOT)/$*/.git"; \
@@ -189,7 +194,7 @@ $(HSHROOT)/%/src/DEBIAN/control: $(HSHROOT)/%/src/DEBIAN
 		echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)setting DEBIAN/control$(HSHCOLORRST)'; \
 		sed "s/Package: {{name}}/Package: $*/" $(HSHTPLDIR)/DEBIAN/control \
 		| sed "s/Description: {{description}}/Description: $*/" \
-		| sed "s/Maintainer: {{maintainer}}/Maintainer: `git config --get user.name` <`git config --get user.email`>/" > $@; \
+		> $@; \
 	fi
 
 $(HSHROOT)/%/src/DEBIAN:
