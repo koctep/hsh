@@ -18,6 +18,8 @@ HSHMODIFIED ?= 0
 
 HSHCOLOR ?= 1
 
+HSHUPDATEDIVERT ?= 0
+
 HSHROOT ?= src
 HSHPACKETS ?= $(shell find $(HSHROOT) -maxdepth 1 -mindepth 1 -type d -exec basename '{}' \;)
 
@@ -145,25 +147,43 @@ $(HSHPOOLDIR):
 	true
 
 %/divert-files: %/check-modified
-	@echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)diverting files$(HSHCOLORRST)'; \
-	git="git --work-tree $(HSHROOT)/$* --git-dir $(HSHROOT)/$*/.git"; \
-	df=$(HSHROOT)/$*/divert ;\
-	[ -e $$df.files ] && rm $$df.files;\
-	[ -e $$df ] && cat $$df > $$df.files ;\
-	files=`find $(HSHROOT)/$*/src -type f | grep -v DEBIAN | sed 's/$(HSHROOT)\/$*\/src//'`; \
-	for f in $$files; do \
-		if [ -e "$$f" ]; then \
-			if [ `dpkg -S $$f 2>/dev/null | egrep -v '^$*' -c` -gt 0 ]; then\
-				echo "$$f" >> $$df.files; \
+	@git="git --work-tree $(HSHROOT)/$* --git-dir $(HSHROOT)/$*/.git"; \
+	df=$(HSHROOT)/$*/divert; \
+	if [ $(HSHUPDATEDIVERT) -eq 1 ] \
+		|| ([ -e "$$df" ] && [ ! -e "$$df.files" ]) \
+		|| ([ `dpkg --get-selections | egrep '$*.*install' | grep -v 'deinstall' -c` -eq 1 ]) \
+		; then \
+		echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)diverting files$(HSHCOLORRST)'; \
+		[ -e "$$df.files" ] && rm "$$df.files"; \
+		[ -e "$$df" ] && cat "$$df" > "$$df.files"; \
+		files=`find $(HSHROOT)/$*/src -type f | grep -v DEBIAN | sed 's/$(HSHROOT)\/$*\/src//'`; \
+		for f in $$files; do \
+			if [ -e "$$f" ]; then \
+				if [ `dpkg -S $$f 2>/dev/null | egrep -v '^$*' -c` -gt 0 ]; then\
+					echo "$$f" >> $$df.files; \
+				fi; \
 			fi; \
+		done; \
+		if [ -e $$df.files ]; then \
+			echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORALERT)adding divert.files$(HSHCOLORRST)' >&2; \
+			msg=`cat $$df.files`; \
+			msg=`echo "\n$$msg"`; \
+			$$git add divert.files; \
+			$$git commit -m "diverting files:$$msg"; \
+		else \
+			echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORALERT)removing divert.files$(HSHCOLORRST)' >&2; \
+			$$git rm divert.files; \
+			$$git commit -m "removed divert.files"; \
 		fi; \
-	done;
+		true; \
+	fi;
 
 %/check-modified: %/set-branch
-	@if [ $(HSHMODIFIED) -eq 0 ]; then \
-		echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)cheking repository modification$(HSHCOLORRST)'; \
-		if [ ! $$(git --work-tree $(HSHROOT)/$* --git-dir $(HSHROOT)/$*/.git status --porcelain | wc -l) -eq 0 ]; then \
-			echo "$*: modified"; >&2 \
+	@echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)cheking repository modification$(HSHCOLORRST)'; \
+	if [ ! $$(git --work-tree $(HSHROOT)/$* --git-dir $(HSHROOT)/$*/.git status --porcelain | wc -l) \
+			-eq 0 ]; then \
+		echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORALERT)modified$(HSHCOLORRST)' >&2; \
+		if [ $(HSHMODIFIED) -eq 0 ]; then \
 			exit 2; \
 		fi; \
 	fi
