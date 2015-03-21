@@ -54,6 +54,7 @@ ifeq ($(HSHUPDATEONDIFF), 1)
 HSHFAILONDIFF := 0
 endif
 
+HSHCOMMIT := $(HSHCOLORALERT)hsh commit$(HSHCOLORRST)
 
 SRC := $(HSHPACKETS:%=$(HSHROOT)/%)
 
@@ -121,7 +122,7 @@ $(HSHPOOLDIR):
 			p=", "; \
 		done; \
 	fi; \
-	sed -i "s/Depends: {{depends}}/Depends: $$deps/" $(HSHROOT)/$*/src/DEBIAN/control
+	sed -i "s/Depends: {{depends}}/Pre-Depends: $$deps/" $(HSHROOT)/$*/src/DEBIAN/control
 
 %/set-maintainer: %/divert
 	$(HSHCMDPREFIX)echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)setting maintainer$(HSHCOLORRST)'; \
@@ -186,12 +187,12 @@ $(HSHPOOLDIR):
 			msg=`cat $$df.files`; \
 			msg=`echo "\n$$msg"`; \
 			$$git add divert.files; \
-			$$git commit -m "diverting files:$$msg"; \
+			$$git commit -m "$(HSHCOMMIT):\ndiverting files:$$msg"; \
 		else \
 			echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORALERT)removing divert.files$(HSHCOLORRST)' >&2; \
 			if [ `$$git ls-files divert.files | wc -l` -eq 1 ]; then \
 				$$git rm divert.files; \
-				$$git commit -m "removed divert.files"; \
+				$$git commit -m "$(HSHCOMMIT): removed divert.files"; \
 			fi; \
 		fi; \
 		true; \
@@ -223,7 +224,7 @@ $(HSHROOT)/%/.git: $(HSHROOT)/%/src/DEBIAN/control
 		cd $(HSHROOT)/$* \
 		&& git init \
 		&& git add * \
-		&& git ci -m 'initial commit' \
+		&& git commit -m '$(HSHCOMMIT): initial commit' \
 		&& git tag 0.0.0 \
 		&& cd $(PWD); \
 	fi
@@ -264,6 +265,9 @@ $(HSHROOT)/%/src/DEBIAN:
 					fi; \
 					msg="different in system"; \
 				fi; \
+			else \
+				msg="$(HSHCOLORMSG)no file in system, $(HSHCOLORALERT)outdated packet $(HSHCOLORPKT)$*$(HSHCOLORRST)"; \
+			fi; \
 				if [ `$$git status --porcelain -- src/$$of | wc -l` -gt 0 ]; then \
 					if [ $(HSHUPDATEONDIFF) -eq 1 ]; then \
 						$$git add src/$$of; \
@@ -272,11 +276,9 @@ $(HSHROOT)/%/src/DEBIAN:
 						msg="$$msg, not committed"; \
 					fi; \
 				fi; \
-			else \
-				msg="$(HSHCOLORMSG)no file in system, $(HSHCOLORALERT)outdated packet $(HSHCOLORPKT)$*$(HSHCOLORRST)"; \
-			fi; \
 			if [ -n "$$msg" ]; then \
 				diff="\n$$diff\t$$of: $(HSHCOLORMSG)$$msg$(HSHCOLORRST)"; \
+				gitc="\n$$gitc\t$$of"; \
 			fi; \
 		done; \
 	elif [ $$pn -gt 1 ]; then \
@@ -284,7 +286,9 @@ $(HSHROOT)/%/src/DEBIAN:
 	fi; \
 	if [ -n "$$diff" ]; then \
 		echo "$*:$$diff"; \
-		$$git commit -m "`echo \"$$diff\"`"; \
+	fi; \
+	if [ -n "$$gitc" ]; then \
+		$$git commit -m "`echo \"$(HSHCOMMIT):$$gitc\"`"; \
 	fi; \
 	if [ -n "$$diff" ] && [ $(HSHFAILONDIFF) -eq 1 ]; then \
 		exit 1; \
