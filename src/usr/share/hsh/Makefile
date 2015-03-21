@@ -122,7 +122,7 @@ $(HSHPOOLDIR):
 			of="$(HSHROOT)/$*/src/DEBIAN/$$df"; \
 			echo "#!/bin/sh\nset -e\n" > $$of; \
 			if [ "$$df" = "preinst" ]; then \
-				for f in `cat $(HSHROOT)/$*/divert.files`; do \
+				for f in `sort -u $(HSHROOT)/$*/divert.files`; do \
 					echo "mkdir -p /var/backups`dirname $$f`\n" >> $$of; \
 					echo "if [ \"\$$1\" = \"install\" ]; then" >> $$of;  \
 					echo "\tdpkg-divert --package $* --rename \\" >> $$of; \
@@ -130,7 +130,7 @@ $(HSHPOOLDIR):
 					echo "fi" >> $$of; \
 				done; \
 			elif [ "$$df" = "postrm" ]; then \
-				for f in `cat $(HSHROOT)/$*/divert.files`; do \
+				for f in `sort -u $(HSHROOT)/$*/divert.files`; do \
 					echo "if [ remove = \"\$$1\"" \
 						" -o abort-install = \"\$$1\"" \
 						" -o disappear = \"\$$1\" ]; then" >> $$of; \
