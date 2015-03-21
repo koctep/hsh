@@ -69,9 +69,9 @@ opts:
 %/discard: %/pack
 	@echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)discarding changes$(HSHCOLORRST)'; \
 	git --work-tree $(HSHROOT)/$* --git-dir $(HSHROOT)/$*/.git checkout -- src/DEBIAN/control; \
-	dd=$(HSHROOT)/$*/src/DEBIAN; \
-	[ -e $$dd/preinst ] && rm $$dd/preinst; \
-	[ -e $$dd/postrm ] && rm $$dd/postrm; \
+	debdir=$(HSHROOT)/$*/src/DEBIAN; \
+	[ -e $$dd/preinst ] && rm $$debdir/preinst; \
+	[ -e $$dd/postrm ] && rm $$debdir/postrm; \
 	[ -e $(HSHROOT)/$*/divert.files ] && rm $(HSHROOT)/$*/divert.files; \
 	true
 
