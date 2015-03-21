@@ -1,0 +1,3 @@
+#!/bin/sh
+
+HSHFAILONDIFF=0 hsh diff "$@" -j 1

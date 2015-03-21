@@ -42,6 +42,19 @@ ifneq ($(HSHPRINTCMDS), 1)
 HSHCMDPREFIX := @
 endif
 
+HSHFORCEUPDATE ?= 0
+HSHUPDATEONDIFF ?= 0
+HSHFAILONDIFF ?= 1
+
+ifeq ($(HSHFORCEUPDATE), 1)
+HSHUPDATEONDIFF := 1
+endif
+
+ifeq ($(HSHUPDATEONDIFF), 1)
+HSHFAILONDIFF := 0
+endif
+
+
 SRC := $(HSHPACKETS:%=$(HSHROOT)/%)
 
 .PHONY: all opts
@@ -145,12 +158,12 @@ $(HSHPOOLDIR):
 		echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)removing DEBIAN/preinst|postrm$(HSHCOLORRST)'; \
 		for df in preinst postrm; do \
 			of="src/DEBIAN/$$df"; \
-			[ -e $$of ] && rm $(HSHROOT)/$*/$$of; \
+			[ -e $(HSHROOT)/$*/$$of ] && rm $(HSHROOT)/$*/$$of; \
 		done; \
 	fi; \
 	true
 
-%/divert-files: %/check-modified
+%/divert-files: %/check-modified %/diff
 	$(HSHCMDPREFIX)git="git --work-tree $(HSHROOT)/$* --git-dir $(HSHROOT)/$*/.git"; \
 	df=$(HSHROOT)/$*/divert; \
 	if [ $(HSHUPDATEDIVERT) -eq 1 ] \
@@ -235,24 +248,45 @@ $(HSHROOT)/%/src/DEBIAN:
 
 %/diff:
 	$(HSHCMDPREFIX)echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)diff$(HSHCOLORRST)'; \
-	files=`find $(HSHROOT)/$*/src -type f | grep -v DEBIAN | sed "s/$(HSHROOT)\/$*\/src//"`; \
+	pn=`dpkg --get-selections | egrep '$*.*install' | grep -v 'deinstall' -c`; \
 	diff=""; \
-	for of in $$files; do \
-		msg=""; \
-		if [ -e "$$of" ]; then \
-			diff $$of $(HSHROOT)/$*/src/$$of > /dev/null; \
-			if [ $$? -eq 0 ]; then \
-			[ `git --work-tree $(HSHROOT)/$* --git-dir $(HSHROOT)/$*/.git status --porcelain -- src/$$of | wc -l` \
-					-eq 0 ] || msg="not commited"; \
+	gitc=""; \
+	git='git --work-tree $(HSHROOT)/$* --git-dir $(HSHROOT)/$*/.git'; \
+	if ([ $$pn -eq 1 ] || [ $(HSHFORCEUPDATE) -eq 1 ]) && [ ! "$*" = "hsh" ]; then \
+		files=`find $(HSHROOT)/$*/src -type f | grep -v DEBIAN | sed "s/$(HSHROOT)\/$*\/src//"`; \
+		for of in $$files; do \
+			msg=""; \
+			if [ -e "$$of" ]; then \
+				diff $$of $(HSHROOT)/$*/src/$$of > /dev/null; \
+				if [ ! $$? -eq 0 ]; then \
+					if [ $(HSHUPDATEONDIFF) -eq 1 ]; then \
+						cp $$of $(HSHROOT)/$*/src/$$of; \
+					fi; \
+					msg="different in system"; \
+				fi; \
+				if [ `$$git status --porcelain -- src/$$of | wc -l` -gt 0 ]; then \
+					if [ $(HSHUPDATEONDIFF) -eq 1 ]; then \
+						$$git add src/$$of; \
+						msg="$$msg, committing"; \
+					else \
+						msg="$$msg, not committed"; \
+					fi; \
+				fi; \
 			else \
-				msg="changed"; \
+				msg="$(HSHCOLORMSG)no file in system, $(HSHCOLORALERT)outdated packet $(HSHCOLORPKT)$*$(HSHCOLORRST)"; \
 			fi; \
-		else \
-			msg="no file"; \
-		fi; \
-		if [ -n "$$msg" ]; then \
-			diff="$$diff\t$$of: $$msg\n"; \
-		fi; \
-	done; \
-	[ -n "$$diff" ] && printf "$*:\n$$diff"; \
+			if [ -n "$$msg" ]; then \
+				diff="\n$$diff\t$$of: $(HSHCOLORMSG)$$msg$(HSHCOLORRST)"; \
+			fi; \
+		done; \
+	elif [ $$pn -gt 1 ]; then \
+		diff="$(HSHCOLORALERT)matched several packets$(HSHCOLORRST)"; \
+	fi; \
+	if [ -n "$$diff" ]; then \
+		echo "$*:$$diff"; \
+		$$git commit -m "`echo \"$$diff\"`"; \
+	fi; \
+	if [ -n "$$diff" ] && [ $(HSHFAILONDIFF) -eq 1 ]; then \
+		exit 1; \
+	fi; \
 	true
