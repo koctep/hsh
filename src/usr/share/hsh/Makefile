@@ -29,10 +29,10 @@ else
 HSHDEST ?= $(HSHPOOLDIR)
 endif
 
-
 ifeq ($(HSHCOLOR), 1)
 HSHCOLORPKT ?= \033[0;32m
 HSHCOLORMSG ?= \033[0;33m
+HSHCOLORALERT ?= \033[0;31m
 HSHCOLORRST = \033[00m
 endif
 
@@ -70,9 +70,8 @@ opts:
 	@echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)discarding changes$(HSHCOLORRST)'; \
 	git --work-tree $(HSHROOT)/$* --git-dir $(HSHROOT)/$*/.git checkout -- src/DEBIAN/control; \
 	debdir=$(HSHROOT)/$*/src/DEBIAN; \
-	[ -e $$dd/preinst ] && rm $$debdir/preinst; \
-	[ -e $$dd/postrm ] && rm $$debdir/postrm; \
-	[ -e $(HSHROOT)/$*/divert.files ] && rm $(HSHROOT)/$*/divert.files; \
+	[ -e $$debdir/preinst ] && rm $$debdir/preinst; \
+	[ -e $$debdir/postrm ] && rm $$debdir/postrm; \
 	true
 
 %/pack: $(HSHPOOLDIR) %/set-version
@@ -172,7 +171,7 @@ $(HSHPOOLDIR):
 %/set-branch: $(HSHROOT)/%/.git
 	@echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)setting branch to "debian"$(HSHCOLORRST)'; \
 	if [ $$(git --work-tree $(HSHROOT)/$* --git-dir $(HSHROOT)/$*/.git branch | wc -l) -eq 0 ]; then \
-		echo "$*: not initialized" >&2; \
+		echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORALERT)not initialized$(HSHCOLORRST)' >&2; \
 		exit 1; \
 	fi; \
 	git --work-tree $(HSHROOT)/$* --git-dir $(HSHROOT)/$*/.git checkout debian 2>&1; \
