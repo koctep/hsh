@@ -39,7 +39,7 @@ HSHCOLORRST = \033[00m
 endif
 
 ifneq ($(HSHPRINTCMDS), 1)
-HSH@ := @
+HSHCMDPREFIX := @
 endif
 
 SRC := $(HSHPACKETS:%=$(HSHROOT)/%)
