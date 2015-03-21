@@ -40,7 +40,8 @@ SRC := $(HSHPACKETS:%=$(HSHROOT)/%)
 
 .PHONY: all opts
 .PHONY: all %/discard %/pack
-.PHONY: %/set-version %/set-depends %/set-branch %/divert %/divert-files %/check-modified
+.PHONY: %/set-version %/set-depends %/set-maintainer %/divert %/divert-files
+.PHONY: %/set-branch %/check-modified
 .PHONY: status %/status
 .PHONY: diff %/diff
 
@@ -74,7 +75,7 @@ opts:
 	[ -e $(HSHROOT)/$*/divert.files ] && rm $(HSHROOT)/$*/divert.files; \
 	true
 
-%/pack: %/set-version $(HSHPOOLDIR)
+%/pack: %/set-version %/divert %/set-depends %/set-maintainer $(HSHPOOLDIR)
 	@echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)packing$(HSHCOLORRST)'; \
 	mkdir -p $(HSHDEST); \
 	rm -f $(HSHDEST)/$*_*.deb; \
@@ -86,7 +87,7 @@ $(HSHPOOLDIR):
 	&& mkdir -p $(HSHPOOLDIR); \
 	true
 
-%/set-version: %/divert %/set-depends %/set-maintainer
+%/set-version:
 	@echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)setting version$(HSHCOLORRST)'; \
 	git="git --work-tree $(HSHROOT)/$* --git-dir $(HSHROOT)/$*/.git"; \
 	ver=`$$git describe --tags | sed 's/^[^0-9]*//'`; \
