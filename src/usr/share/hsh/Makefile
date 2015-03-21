@@ -176,8 +176,10 @@ $(HSHPOOLDIR):
 			$$git commit -m "diverting files:$$msg"; \
 		else \
 			echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORALERT)removing divert.files$(HSHCOLORRST)' >&2; \
-			$$git rm divert.files; \
-			$$git commit -m "removed divert.files"; \
+			if [ `$$git ls-files divert.files | wc -l` -eq 1 ]; then \
+				$$git rm divert.files; \
+				$$git commit -m "removed divert.files"; \
+			fi; \
 		fi; \
 		true; \
 	fi;
