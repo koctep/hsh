@@ -73,7 +73,7 @@ SRC := $(HSHPACKETS:%=$(HSHROOT)/%)
 all: $(HSHPACKETS:%=%/discard)
 	$(HSHCMDPREFIX)if [ -n $(HSHPOOLDIR) ]; then \
 		echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)updating packages file$(HSHCOLORRST)'; \
-		dpkg-scanpackages $(HSHPOOLDIR) > $(HSHPOOLDIR)/Packages; \
+		dpkg-scanpackages $(HSHPOOLDIR) > $(HSHPOOLDIR)/Packages 2>/dev/null; \
 		bzip2 -kf $(HSHPOOLDIR)/Packages; \
 	fi
 
@@ -152,8 +152,6 @@ $(HSHPOOLDIR):
 					echo "fi" >> $$of; \
 				done; \
 			fi ;\
-			echo "\nexit 0" >> $$of; \
-			chmod a+x $$of; \
 		done; \
 	else \
 		echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)removing DEBIAN/preinst|postrm$(HSHCOLORRST)'; \
@@ -162,6 +160,17 @@ $(HSHPOOLDIR):
 			[ -e $(HSHROOT)/$*/$$of ] && rm $(HSHROOT)/$*/$$of; \
 		done; \
 	fi; \
+	for df in preinst postrm; do \
+		of="$(HSHROOT)/$*/src/DEBIAN/$$df"; \
+		if [ -e $(HSHROOT)/$*/$$df ]; then \
+			[ ! -e $$of ] && echo "#!/bin/sh\nset -e\n" > $$of; \
+			cat $(HSHROOT)/$*/$$df >> $$of; \
+		fi; \
+		if [ -e $$of ]; then \
+			echo "\nexit 0" >> $$of; \
+			chmod a+x $$of; \
+		fi; \
+	done; \
 	true
 
 %/divert-files: %/check-modified %/diff
@@ -183,17 +192,17 @@ $(HSHPOOLDIR):
 			fi; \
 		done; \
 		if [ -e $$df.files ]; then \
-			echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORALERT)adding divert.files$(HSHCOLORRST)' >&2; \
-			msg=`cat $$df.files`; \
-			msg=`echo "\n$$msg"`; \
-			$$git add divert.files; \
-			$$git commit -m "$(HSHCOMMIT):\ndiverting files:$$msg"; \
-		else \
-			echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORALERT)removing divert.files$(HSHCOLORRST)' >&2; \
-			if [ `$$git ls-files divert.files | wc -l` -eq 1 ]; then \
-				$$git rm divert.files; \
-				$$git commit -m "$(HSHCOMMIT): removed divert.files"; \
+			if [ `$$git status --porcelain divert.files | wc -l` -eq 1 ]; then \
+				echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORALERT)adding divert.files$(HSHCOLORRST)' >&2; \
+				msg=`cat $$df.files`; \
+				msg=`echo "\n$$msg"`; \
+				$$git add divert.files; \
+				$$git commit -m "`echo \"$(HSHCOMMIT):\ndiverting files:$$msg\"`"; \
 			fi; \
+		elif [ `$$git ls-files divert.files | wc -l` -eq 1 ]; then \
+			echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORALERT)removing divert.files$(HSHCOLORRST)' >&2; \
+			$$git rm divert.files; \
+			$$git commit -m "`echo \"$(HSHCOMMIT): removed divert.files\"`"; \
 		fi; \
 		true; \
 	fi;
@@ -224,7 +233,7 @@ $(HSHROOT)/%/.git: $(HSHROOT)/%/src/DEBIAN/control
 		cd $(HSHROOT)/$* \
 		&& git init \
 		&& git add * \
-		&& git commit -m '$(HSHCOMMIT): initial commit' \
+		&& git commit -m "`echo \"$(HSHCOMMIT): initial commit\"`" \
 		&& git tag 0.0.0 \
 		&& cd $(PWD); \
 	fi
