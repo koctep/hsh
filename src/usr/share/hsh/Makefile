@@ -74,16 +74,20 @@ all: $(HSHPACKETS:%=%/discard)
 	$(HSHCMDPREFIX)if [ -n $(HSHPOOLDIR) ]; then \
 		echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)updating packages file$(HSHCOLORRST)'; \
 		if [ -n "$(HSHGPGKEY)" ]; then \
-			gpg --export -a $(HSHGPGKEY) > $(HSHPOOLDIR)/$(HSHPGPKEY).key; \
+			echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)packages signing$(HSHCOLORRST)'; \
+			gpg --export -a $(HSHGPGKEY) > $(HSHPOOLDIR)/$(HSHGPGKEY).key; \
 			dpkg-sig -k $(HSHGPGKEY) -s builder $(HSHPOOLDIR)/*.deb; \
 		fi; \
 		dpkg-scanpackages $(HSHPOOLDIR) > $(HSHPOOLDIR)/Packages 2>/dev/null; \
 		bzip2 -kf $(HSHPOOLDIR)/Packages; \
 		echo MD5Sum: > Release; \
 		(cd $(HSHPOOLDIR); \
-			for i in Packages Packages.bz2 ; do echo " "`md5sum $i` `du $i` >> Release; done; \
+			for i in Packages Packages.bz2; do \
+				echo " "`md5sum $$i | awk '{print $1}'` `du $$i` >> Release; \
+			done; \
 		); \
 		if [ -n "$(HSHGPGKEY)" ]; then \
+			echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)release signing$(HSHCOLORRST)'; \
 			gpg --yes -abs -u $(HSHGPGKEY) -o $(HSHPOOLDIR)/Release.gpg $(HSHPOOLDIR)/Release; \
 		fi; \
 	fi
