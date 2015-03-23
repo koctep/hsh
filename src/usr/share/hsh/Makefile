@@ -80,10 +80,10 @@ all: $(HSHPACKETS:%=%/discard)
 		fi; \
 		dpkg-scanpackages $(HSHPOOLDIR) > $(HSHPOOLDIR)/Packages 2>/dev/null; \
 		bzip2 -kf $(HSHPOOLDIR)/Packages; \
-		echo MD5Sum: > Release; \
 		(cd $(HSHPOOLDIR); \
+			echo MD5Sum: > Release; \
 			for i in Packages Packages.bz2; do \
-				echo " "`md5sum $$i | awk '{print $1}'` `du $$i` >> Release; \
+				echo " "`md5sum $$i | awk '{print $$1}'` `du -b $$i` >> Release; \
 			done; \
 		); \
 		if [ -n "$(HSHGPGKEY)" ]; then \
