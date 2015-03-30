@@ -273,7 +273,7 @@ $(HSHROOT)/%/src/DEBIAN:
 
 %/diff:
 	$(HSHCMDPREFIX)echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)diff$(HSHCOLORRST)'; \
-	pn=`apt-cache policy $* | grep 'Installed' | grep -v 'Installed: (none)'`; \
+	pn=`apt-cache policy $* | grep 'Installed' | grep -v 'Installed: (none)' -c`; \
 	diff=""; \
 	gitc=""; \
 	git='git --work-tree $(HSHROOT)/$* --git-dir $(HSHROOT)/$*/.git'; \
