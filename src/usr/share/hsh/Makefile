@@ -287,7 +287,7 @@ $(HSHROOT)/%/src/DEBIAN:
 					if [ $(HSHUPDATEONDIFF) -eq 1 ]; then \
 						cp $$of $(HSHROOT)/$*/src/$$of; \
 					fi; \
-					msg="different in system"; \
+					msg="different in system, use HSHUPDATEONDIFF=1 to add it"; \
 				fi; \
 			else \
 				msg="$(HSHCOLORMSG)no file in system, $(HSHCOLORALERT)outdated packet $(HSHCOLORPKT)$*$(HSHCOLORRST)"; \
