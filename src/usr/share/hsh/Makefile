@@ -85,6 +85,10 @@ all: $(HSHPACKETS:%=%/discard)
 			for i in Packages Packages.bz2; do \
 				echo " "`md5sum $$i | awk '{print $$1}'` `du -b $$i` >> Release; \
 			done; \
+			echo SHA256: >> Release; \
+			for i in Packages Packages.bz2; do \
+				echo " "`sha256sum $$i | awk '{print $$1}'` `du -b $$i` >> Release; \
+			done; \
 		); \
 		if [ -n "$(HSHGPGKEY)" ]; then \
 			echo "\t"'$(HSHCOLORPKT)$*: $(HSHCOLORMSG)release signing$(HSHCOLORRST)'; \
